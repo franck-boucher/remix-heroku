@@ -1,7 +1,74 @@
 import { AddIcon, PhoneIcon, WarningIcon } from "@chakra-ui/icons";
-import { Button, Container, Stack } from "@chakra-ui/react";
+import { Button, Container, Input, Stack } from "@chakra-ui/react";
+import { Line } from "@prisma/client";
+import React from "react";
+import {
+  ActionFunction,
+  Form,
+  LoaderFunction,
+  redirect,
+  useLoaderData,
+  useTransition,
+} from "remix";
+import invariant from "tiny-invariant";
+
+import db from "~/server/db";
+
+type LoaderData = {
+  lines: Line[];
+};
+export const loader: LoaderFunction = async (): Promise<LoaderData> => {
+  const lines = await db.line.findMany({
+    select: {
+      id: true,
+      createdAt: true,
+      updatedAt: true,
+      label: true,
+    },
+  });
+  return { lines };
+};
+
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await request.formData();
+
+  if (request.method === "POST") {
+    const newLine = formData.get("newLine");
+    invariant(typeof newLine === "string");
+
+    if (newLine) {
+      await db.line.create({
+        data: {
+          label: newLine,
+        },
+      });
+    }
+  }
+
+  if (request.method === "DELETE") {
+    const lineId = formData.get("lineId");
+    invariant(typeof lineId === "string");
+    await db.line.delete({
+      where: {
+        id: Number(lineId),
+      },
+    });
+  }
+
+  return redirect("/");
+};
 
 export default function Index() {
+  const { lines } = useLoaderData<LoaderData>();
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const transition = useTransition();
+
+  React.useEffect(() => {
+    if (transition.state === "submitting") {
+      formRef.current && formRef.current.reset();
+    }
+  }, [transition.submission]);
+
   return (
     <Container>
       <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }}>
@@ -54,6 +121,34 @@ export default function Index() {
               Button
             </Button>
           </Stack>
+        </div>
+        <hr style={{ margin: "2rem" }} />
+        <div>
+          <Form method="post" ref={formRef}>
+            <div style={{ display: "flex", gap: "1rem" }}>
+              <Input placeholder="New line" name="newLine" />
+              <Button type="submit" colorScheme="blue">
+                Add
+              </Button>
+            </div>
+          </Form>
+          <ul style={{ marginTop: "1rem" }}>
+            {lines.map((line) => (
+              <li
+                key={line.id}
+                style={{ display: "flex", justifyContent: "space-between" }}
+              >
+                <span>
+                  [{line.id}] {line.label}
+                </span>
+                <Form method="delete">
+                  <button type="submit" name="lineId" value={line.id}>
+                    x
+                  </button>
+                </Form>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </Container>
