@@ -72,7 +72,7 @@ export default function Index() {
   return (
     <Container>
       <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }}>
-        <h1>Welcome to Remix - test dev branch</h1>
+        <h1>Welcome to Remix - test MR branch</h1>
         <ul>
           <li>
             <a
